@@ -1,0 +1,297 @@
+---
+title: "Análisis Retención Alumnos"
+author: "Luis Munizaga"
+format: pdf
+editor: visual
+---
+
+# Analisis de Retención Alumnos
+
+> ## Definicion del Problema
+>
+> En el contexto actual de alta competitividad en el sector educativo, la retención de alumnos se ha transformado en un factor estratégico clave para asegurar la sostenibilidad y crecimiento de las instituciones. Las tasas de deserción estudiantil afectan directamente tanto los ingresos como la reputación institucional. A pesar de contar con información académica, administrativa y conductual de los estudiantes, muchas instituciones aún carecen de herramientas analíticas que les permitan anticipar el riesgo de abandono y actuar de forma oportuna.
+
+> ## Objetivo
+>
+> El objetivo principal de esta investigación es analizar los factores asociados a la retención de alumnos y desarrollar un modelo predictivo de fuga (churn) que permita identificar patrones de abandono estudiantil, utilizando técnicas de análisis de datos y machine learning. Esto permitirá proponer estrategias de intervención focalizadas que mejoren la permanencia estudiantil y optimicen el uso de recursos institucionales.
+
+> ## Introdución
+>
+> El Dataset Reporte SIAE se caracteriza por conterner los siguientes aspectos:
+>
+> -   Aseguramiento de la calidad de la educación: Analiza que través de la evaluación, fiscalización, orientación y apoyo , fortalezca la mejora educativa.
+> -   Promover la equidad: Analiza que todos los estudiantes, especialmente aquellos con necesidades especiales, tengan acceso a una educación de calidad.
+> -   Fomentar la diversidad: analiza la diversidad en los procesos educativos, culturales, religiosos y sociales.
+> -   Coordinación con otras entidades: El SIAE trabaja en coordinación con otros órganos del Estado para implementar políticas y programas en educación.
+> -   Enfoque en la comunidad: busca fortalecer la vinculación entre los establecimientos educacionales y las comunidades.
+>
+> ### Detalle de Variables
+>
+> #### Datos personales y de identificación Rut Alumno / Pidm: Identificadores únicos del alumno.
+>
+> Nombre / Email: Información de contacto.
+>
+> Género / Edad: Variables demográficas básicas.
+>
+> #### Información académica Periodo Académico: Año y semestre correspondiente al registro.
+>
+> Periodo de ingreso a la institución / Periodo de ingreso a la carrera: Fecha de inicio de los estudios.
+>
+> Sede, Facultad, Escuela, Carr Cod, Carrera: Información sobre la unidad académica.
+>
+> Régimen: Jornada (diurna/vespertina).
+>
+> Tipo de carrera: Profesional, técnica, etc.
+>
+> Tipo de alumno: Regular, nuevo, etc.
+>
+> Alumno SIES: Indicador de registro en sistema externo.
+>
+> Plan Abierto en SRM: Plan activo en sistema académico.
+>
+> Ciclo al que pertenece el alumno: Nivel de avance (inicio, medio, final).
+>
+> #### Rendimiento académico Avance de malla, Progreso académico: Porcentaje de avance curricular.
+>
+> Promedio Notas Acumulado, Promedio Notas Parciales: Desempeño general y del semestre.
+>
+> N° notas parciales, % de Asistencia del periodo: Participación y rendimiento.
+>
+> Irregularidad: Indica si el alumno presenta alguna anomalía académica.
+>
+> \% Asignaturas con NSP, N° NSP: Porcentaje y número de asignaturas no superadas.
+>
+> #### Indicadores de riesgo Riesgo Uplanner: Nivel de riesgo predicho por plataforma externa.
+>
+> Riesgo Factor Principal / Nombre Factor Principal: Variable crítica que influye en el riesgo.
+>
+> Tipo de discapacidad declarada: Indicador de inclusión y posibles necesidades especiales.
+>
+> #### Información financiera Saldo Total, N Cuotas Total: Deuda total y número de cuotas.
+>
+> Saldo Moroso, N Cuotas Morosas, Días Mora, Tramo Mora: Nivel de morosidad.
+>
+> Saldo Total al perder la vigencia (y sus variables relacionadas): Situación financiera al dejar la institución.
+>
+> Indicador CAE, Indicador BECA: Tipos de financiamiento estudiantil.
+>
+> #### Participación en actividades institucionales Cursa Mentorías, N° Tutorías, N° Inscripción en talleres DAE, Talleres Aprobados: Nivel de participación en programas de apoyo académico.
+>
+> \% Talleres Acompañamiento Aprobados: Indicador de compromiso y logro.
+>
+> N° Actividades Vida Universitaria: Participación extracurricular.
+>
+> Cant Asistencia a Actividades de Inducción: Participación inicial.
+>
+> #### Apoyo psicosocial N° Asistencias Orientador DAE
+>
+> N° Asistencia psicológica
+>
+> N° Asistencia trabajador social
+>
+> Estas variables ayudan a evaluar el apoyo no académico recibido por el alumno.
+>
+> #### Interacción con plataformas N° Conexiones a MiUDLA
+>
+> Último inicio sesión a MiUDLA: Indicadores de actividad en plataforma educativa.
+>
+> N° solicitudes Web, Fecha último requerimiento Web: Relación digital con la universidad.
+>
+> #### Otros indicadores Vigencia: Indica si el alumno está activo o no.
+>
+> Tipo de Baja, Fecha de Baja: Razón y fecha de retiro si aplica.
+>
+> Reclamo SES / SERNAC / Internos: Quejas presentadas por el alumno.
+>
+> Cantidad de Ingresos torniquetes, Última Fecha Acceso torniquetes: Presencia física en el campus.P
+
+> # Variables seleccionadas / Problema, Objetivo
+>
+> #### Variables Cuantitativas
+>
+> -   Promedio Notas Acumulado: El rendimiento académico es uno de los principales factores asociados a la deserción. Los estudiantes con bajas calificaciones suelen enfrentar mayor frustración, desmotivación y riesgo de reprobación, lo que los lleva a abandonar sus estudios.
+>
+> -   Días Mora: Las dificultades económicas son una causa frecuente de deserción en la educación superior. El número de días de mora refleja la persistencia del problema financiero.
+>
+> #### Variables Cualitativas
+>
+> -   Riesgo Uplanner: Esta variable resume múltiples dimensiones de riesgo tales como; académico, económico, de asistencia, etc; en una sola categoría, generada por un modelo externo.
+>
+> -   Tipo de Baja: Aunque sólo se conoce tras el abandono, esta variable es clave para entender los patrones históricos de fuga. Se usara para entrenar modelos con aprendizaje supervisado como etiqueta de clase.
+>
+> ### Pregunta de investigación
+>
+> ¿En qué medida el promedio de notas acumulado, los días de mora financiera, el nivel de riesgo académico (según Uplanner) y el tipo de baja explican o predicen la probabilidad de que un alumno se fugue (abandone) de la institución?
+>
+> ### Hipótesis
+>
+> **Hipótesis nula:** El promedio de notas acumulado, los días de mora, el nivel de riesgo académico y el tipo de baja no tienen un efecto significativo sobre la probabilidad de fuga estudiantil.
+>
+> **Hipótesis alternativa :** Al menos una de las variables —promedio de notas acumulado, días de mora, nivel de riesgo Uplanner o tipo de baja— tiene un efecto significativo sobre la probabilidad de fuga estudiantil.
+>
+> ### Parámetro a estimar
+>
+> La probabilidad de fuga del alumno, se modelara como una variable dependiente binaria:
+>
+> -   0 = permanece
+>
+> -   1 = se fuga
+
+# CODIGO
+
+#### Instalación librerías a utilizar
+
+```{r}
+#instalacion 
+install.packages(c("tidyverse", "skimr", "ggplot2", "corrplot","dplyr","caret"))
+
+```
+
+#### Carga de librerías
+
+```{r}
+#carga de librerias
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(ggdark)
+library(skimr)
+library(corrplot)
+library(caret)
+```
+
+#### Carga Dataset y filtrado de columnas relevantes
+
+```{r}
+#Variable Carga contiene el dataset completo
+carga <- read_excel("Reporte SIAE.xlsx", sheet = "Reporte SIAE",skip = 2) 
+# variable data contiene las columnas seleccionadas para el analisis
+data <- carga %>% select(`Promedio Notas Acumulado`, `Dias Mora`, `Riesgo Uplanner`, `Tipo de Baja`, `Vigencia`)
+
+head(carga)
+head(data)
+```
+
+Muestra de 1000 datos
+
+```{r}
+data_m <- data %>% sample_n(size = 1000)
+head(data_fil)
+```
+
+#### Analisis estadistico 
+
+```{r}
+# Resumen estadístico para variables numéricas
+summary(select(data, `Promedio Notas Acumulado`, `Dias Mora`))
+
+# Frecuencias para variables categóricas
+table(data$`Riesgo Uplanner`)
+table(data$`Tipo de Baja`)
+
+```
+
+#### Graficos para analisis de variables 
+
+##### Graficos Numericos
+
+```{r}
+ggplot(data, aes(x = `Promedio Notas Acumulado`)) +
+  geom_histogram(fill = "steelblue", bins = 30) +
+  theme_minimal()
+
+ggplot(data, aes(x = `Dias Mora`)) +
+  geom_histogram(fill = "salmon", bins = 30) +
+  theme_minimal()
+
+```
+
+##### Graficos Categoricos
+
+```{r}
+ggplot(data, aes(x = `Riesgo Uplanner`)) +
+  geom_bar(fill = "purple") +
+  theme_minimal()
+
+ggplot(data, aes(x = `Tipo de Baja`)) +
+  geom_bar(fill = "darkgreen") +
+  theme_minimal()
+```
+
+#### Grafico Correlacion 
+
+```{r}
+datos_num <- select(data, `Promedio Notas Acumulado`, `Dias Mora`)
+cor_matrix <- cor(datos_num, use = "complete.obs")
+
+corrplot(cor_matrix, method = "circle")
+```
+
+#### Grafico de cajas y bigotes
+
+```{r}
+
+ggplot(data, aes(x = Vigencia, y = `Promedio Notas Acumulado`, fill = Vigencia)) +
+  geom_boxplot() +
+  theme_minimal()
+
+ggplot(data, aes(x = Vigencia, y = `Dias Mora`, fill = Vigencia)) +
+  geom_boxplot() +
+  theme_minimal()
+```
+
+#### Entrenamiento de modelo de regresión logística
+
+```{r}
+data <- data %>%
+  mutate(
+    Fuga = ifelse(Vigencia == "NO", 1, 0),
+    Riesgo_Uplanner = as.factor(`Riesgo Uplanner`),
+    Tipo_Baja = as.factor(`Tipo de Baja`),
+    Fuga= as.factor(Vigencia)
+  )
+```
+
+```{r}
+data_lim <- data %>%
+  select(`Promedio Notas Acumulado`, `Dias Mora`, Riesgo_Uplanner, Tipo_Baja, Fuga) %>%
+  drop_na()
+
+```
+
+```{r}
+set.seed(123)  # Para reproducibilidad
+
+# Dividir en 70% entrenamiento, 30% prueba
+index <- createDataPartition(data_lim$Fuga, p = 0.7, list = FALSE)
+train_data <- data_lim[index, ]
+test_data  <- data_lim[-index,]
+```
+
+```{r}
+
+table(data_lim$Fuga)
+
+table(data$Tipo_Baja)
+
+table(data$Vigencia)
+```
+
+```{r}
+modelo_log <- glm(Fuga ~ `Promedio Notas Acumulado` + `Dias Mora` + Riesgo_Uplanner + Tipo_Baja,
+                  data = train_data, family = binomial)
+
+summary(modelo_log)
+```
+
+```{r}
+# Probabilidades
+pred_prob <- predict(modelo_log, test_data, type = "response")
+
+# Convertir a clase (umbral 0.5)
+pred_class <- ifelse(pred_prob > 0.5, 1, 0)
+
+# Matriz de confusión
+confusionMatrix(factor(pred_class), factor(test_data$Fuga))
+```
