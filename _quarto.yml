@@ -1,5 +1,6 @@
 project:
-  title: "Analisis de Retención Alumnos"
-
+title: "Análisis de Retención Alumnos"
+author: "Luis Munizaga"
+format: pdf
 editor: visual
 
