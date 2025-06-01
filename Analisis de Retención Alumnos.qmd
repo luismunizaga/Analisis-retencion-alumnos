@@ -17,7 +17,7 @@ editor: visual
 
 > ## Introdución
 >
-> El Dataset Reporte SIAE se caracteriza por conterner los siguientes aspectos:
+> El Dataset Reporte SIAE el cual contiene 32.208 registros de todas las sede de la universidad de las amerias se caracteriza por conterner los siguientes aspectos:
 >
 > -   Aseguramiento de la calidad de la educación: Analiza que través de la evaluación, fiscalización, orientación y apoyo , fortalezca la mejora educativa.
 > -   Promover la equidad: Analiza que todos los estudiantes, especialmente aquellos con necesidades especiales, tengan acceso a una educación de calidad.
@@ -25,7 +25,7 @@ editor: visual
 > -   Coordinación con otras entidades: El SIAE trabaja en coordinación con otros órganos del Estado para implementar políticas y programas en educación.
 > -   Enfoque en la comunidad: busca fortalecer la vinculación entre los establecimientos educacionales y las comunidades.
 >
-> ### Detalle de Variables
+> ## Detalle de Variables
 >
 > #### Datos personales y de identificación Rut Alumno / Pidm: Identificadores únicos del alumno.
 >
@@ -105,7 +105,7 @@ editor: visual
 >
 > Cantidad de Ingresos torniquetes, Última Fecha Acceso torniquetes: Presencia física en el campus.P
 
-> # Variables seleccionadas / Problema, Objetivo
+> ## Variables seleccionadas / Problema, Objetivo
 >
 > #### Variables Cuantitativas
 >
@@ -117,19 +117,19 @@ editor: visual
 >
 > -   Riesgo Uplanner: Esta variable resume múltiples dimensiones de riesgo tales como; académico, económico, de asistencia, etc; en una sola categoría, generada por un modelo externo.
 >
-> -   Tipo de Baja: Aunque sólo se conoce tras el abandono, esta variable es clave para entender los patrones históricos de fuga. Se usara para entrenar modelos con aprendizaje supervisado como etiqueta de clase.
+> -   Riesgo Factor Principal: Explica la causa principal del riesgo por ejemplo;"Académico", "Financiero", "Personal".
 >
 > ### Pregunta de investigación
 >
-> ¿En qué medida el promedio de notas acumulado, los días de mora financiera, el nivel de riesgo académico (según Uplanner) y el tipo de baja explican o predicen la probabilidad de que un alumno se fugue (abandone) de la institución?
+> ¿En qué medida el promedio de notas acumulado, los días de mora financiera, el nivel de riesgo académico (según Uplanner) y el tipo de riesgo ractor principal predicen la probabilidad de que un alumno se fugue (abandone) de la institución?
 >
-> ### Hipótesis
+> ## Hipótesis
 >
 > **Hipótesis nula:** El promedio de notas acumulado, los días de mora, el nivel de riesgo académico y el tipo de baja no tienen un efecto significativo sobre la probabilidad de fuga estudiantil.
 >
-> **Hipótesis alternativa :** Al menos una de las variables —promedio de notas acumulado, días de mora, nivel de riesgo Uplanner o tipo de baja— tiene un efecto significativo sobre la probabilidad de fuga estudiantil.
+> **Hipótesis alternativa :** Al menos una de las variables —promedio de notas acumulado, días de mora, nivel de riesgo Uplanner o riesgo factor principal — tiene un efecto significativo sobre la probabilidad de fuga estudiantil.
 >
-> ### Parámetro a estimar
+> ## Parámetro a estimar
 >
 > La probabilidad de fuga del alumno, se modelara como una variable dependiente binaria:
 >
@@ -143,7 +143,7 @@ editor: visual
 
 ```{r}
 #instalacion 
-install.packages(c("tidyverse", "skimr", "ggplot2", "corrplot","dplyr","caret"))
+install.packages(c("tidyverse", "skimr", "ggplot2", "corrplot","caret","conflicted","randomForest"))
 
 ```
 
@@ -152,13 +152,14 @@ install.packages(c("tidyverse", "skimr", "ggplot2", "corrplot","dplyr","caret"))
 ```{r}
 #carga de librerias
 library(readxl)
-library(dplyr)
 library(ggplot2)
 library(tidyverse)
 library(ggdark)
 library(skimr)
 library(corrplot)
-library(caret)
+library(conflicted)
+library(dplyr)
+library(randomForest)
 ```
 
 #### Carga Dataset y filtrado de columnas relevantes
@@ -166,132 +167,245 @@ library(caret)
 ```{r}
 #Variable Carga contiene el dataset completo
 carga <- read_excel("Reporte SIAE.xlsx", sheet = "Reporte SIAE",skip = 2) 
+
 # variable data contiene las columnas seleccionadas para el analisis
-data <- carga %>% select(`Promedio Notas Acumulado`, `Dias Mora`, `Riesgo Uplanner`, `Tipo de Baja`, `Vigencia`)
+data <- carga %>% select(`Promedio Notas Acumulado`, `Dias Mora`, `Riesgo Uplanner`, `Tipo de Baja`, `Vigencia`,`Riesgo Factor Principal`)
 
 head(carga)
 head(data)
 ```
 
-Muestra de 1000 datos
+#### Funcion para limpiar y normalizar los datos
 
 ```{r}
-data_m <- data %>% sample_n(size = 1000)
-head(data_fil)
+limpiar_normalizar_datos <- function(df, umbral_na_col = 0.5) {
+  
+# 1. Eliminar columnas con más del x% de NA
+  df <- df %>%
+    select(where(~ mean(is.na(.)) <= umbral_na_col))
+  
+  # 2. Eliminar filas con NA
+  df <- df %>% drop_na()
+  
+  # 3. Normalizar columnas numéricas (Min-Max)
+  normalizar <- function(x) {
+    if (is.numeric(x)) {
+      return((x - min(x)) / (max(x) - min(x)))
+    } else {
+      return(x)
+    }
+  }
+  
+  df <- df %>%
+    mutate(across(where(is.numeric), normalizar)) %>%
+    mutate(across(where(is.character), as.factor))
+  
+  return(df)
+}
 ```
 
-#### Analisis estadistico 
+#### Utilizacion de la funcion para limpiar los datos
+
+```{r}
+data_limpio <- limpiar_normalizar_datos(data)
+```
+
+Muestra balanceada de 2094 registros
+
+```{r}
+retirados <- data_limpio %>% dplyr::filter(Vigencia == "NO")
+activos   <- data_limpio %>% dplyr::filter(Vigencia != "NO")
+
+# 2. Tomar muestra aleatoria de 1000 de cada grupo
+muestra_retirados <- retirados %>% sample_n(1047)
+muestra_activos   <- activos %>% sample_n(1047)
+
+# 3. Unir y mezclar
+data_balanceado <- bind_rows(muestra_retirados, muestra_activos) %>%
+  sample_frac(1)  # Mezclar aleatoriamente las filas
+
+# 4. Verificar distribución
+table(data_balanceado$Vigencia)
+```
+
+#### Revisión de datos nulos
+
+```{r}
+colSums(is.na(data_limpio))
+```
+
+#### Análisis estadístico
 
 ```{r}
 # Resumen estadístico para variables numéricas
-summary(select(data, `Promedio Notas Acumulado`, `Dias Mora`))
+summary(select(data_limpio, `Promedio Notas Acumulado`, `Dias Mora`))
 
 # Frecuencias para variables categóricas
-table(data$`Riesgo Uplanner`)
-table(data$`Tipo de Baja`)
+table(data_limpio$Vigencia)
+table(data_limpio$`Riesgo Factor Principal`)
+table(data_limpio$`Riesgo Uplanner`)
 
 ```
 
-#### Graficos para analisis de variables 
+#### Gráficos para análisis de variables
 
-##### Graficos Numericos
+#### Graficos Numéricos
 
 ```{r}
-ggplot(data, aes(x = `Promedio Notas Acumulado`)) +
+ggplot(data_limpio, aes(x = `Promedio Notas Acumulado`)) +
   geom_histogram(fill = "steelblue", bins = 30) +
   theme_minimal()
 
-ggplot(data, aes(x = `Dias Mora`)) +
+ggplot(data_limpio, aes(x = `Dias Mora`)) +
   geom_histogram(fill = "salmon", bins = 30) +
   theme_minimal()
 
 ```
 
-##### Graficos Categoricos
+#### Gráficos Categóricos
 
 ```{r}
-ggplot(data, aes(x = `Riesgo Uplanner`)) +
+ggplot(data_limpio, aes(x = `Riesgo Uplanner`)) +
   geom_bar(fill = "purple") +
   theme_minimal()
 
-ggplot(data, aes(x = `Tipo de Baja`)) +
+ggplot(data_limpio, aes(x = `Riesgo Factor Principal`)) +
   geom_bar(fill = "darkgreen") +
   theme_minimal()
 ```
 
-#### Grafico Correlacion 
+#### Gráfico Correlación
 
 ```{r}
-datos_num <- select(data, `Promedio Notas Acumulado`, `Dias Mora`)
+datos_num <- select(data_limpio, `Promedio Notas Acumulado`, `Dias Mora`)
 cor_matrix <- cor(datos_num, use = "complete.obs")
 
 corrplot(cor_matrix, method = "circle")
 ```
 
-#### Grafico de cajas y bigotes
+#### Gráfico de cajas y bigotes
 
 ```{r}
 
-ggplot(data, aes(x = Vigencia, y = `Promedio Notas Acumulado`, fill = Vigencia)) +
+ggplot(data_limpio, aes(x = Vigencia, y = `Promedio Notas Acumulado`, fill = Vigencia)) +
   geom_boxplot() +
   theme_minimal()
 
-ggplot(data, aes(x = Vigencia, y = `Dias Mora`, fill = Vigencia)) +
+ggplot(data_limpio, aes(x = Vigencia, y = `Dias Mora`, fill = Vigencia)) +
   geom_boxplot() +
   theme_minimal()
 ```
 
 #### Entrenamiento de modelo de regresión logística
 
+#### Codificar la variable objetivo "Vigencia" como binaria
+
 ```{r}
-data <- data %>%
+data_limpio <- data_limpio %>%
   mutate(
-    Fuga = ifelse(Vigencia == "NO", 1, 0),
-    Riesgo_Uplanner = as.factor(`Riesgo Uplanner`),
-    Tipo_Baja = as.factor(`Tipo de Baja`),
-    Fuga= as.factor(Vigencia)
+    Fuga = ifelse(Vigencia == "NO", 1, 0),  # "NO" es retirado
+    Fuga = as.factor(Fuga)
   )
-```
-
-```{r}
-data_lim <- data %>%
-  select(`Promedio Notas Acumulado`, `Dias Mora`, Riesgo_Uplanner, Tipo_Baja, Fuga) %>%
-  drop_na()
 
 ```
 
-```{r}
-set.seed(123)  # Para reproducibilidad
+#### Dividicion de los datos en entrenamiento 70% y prueba 30%
 
-# Dividir en 70% entrenamiento, 30% prueba
-index <- createDataPartition(data_lim$Fuga, p = 0.7, list = FALSE)
-train_data <- data_lim[index, ]
-test_data  <- data_lim[-index,]
+```{r}
+set.seed(123)
+
+# Crear índice
+index <- caret::createDataPartition(data_limpio$Fuga, p = 0.7, list = FALSE)
+
+# División
+train_data <- data_limpio[index, ]
+test_data  <- data_limpio[-index, ]
 ```
 
-```{r}
-
-table(data_lim$Fuga)
-
-table(data$Tipo_Baja)
-
-table(data$Vigencia)
-```
+#### Entrenamiento del modelo de regresión logística
 
 ```{r}
-modelo_log <- glm(Fuga ~ `Promedio Notas Acumulado` + `Dias Mora` + Riesgo_Uplanner + Tipo_Baja,
+modelo_log <- glm(Fuga ~ `Promedio Notas Acumulado` + `Dias Mora` + `Riesgo Uplanner` + `Riesgo Factor Principal`, 
                   data = train_data, family = binomial)
 
 summary(modelo_log)
 ```
 
+#### Cambio a variable Numerica "Riesgo Uplanner" para evaluación
+
 ```{r}
-# Probabilidades
+train_data$`Riesgo Uplanner` <- as.numeric(train_data$`Riesgo Uplanner`)
+test_data$`Riesgo Uplanner`  <- as.numeric(test_data$`Riesgo Uplanner`)
+```
+
+#### Evaluación del modelo de regresión logística
+
+```{r}
+
+# Probabilidades predichas
 pred_prob <- predict(modelo_log, test_data, type = "response")
 
-# Convertir a clase (umbral 0.5)
+# Convertir a clases con umbral 0.5
 pred_class <- ifelse(pred_prob > 0.5, 1, 0)
 
-# Matriz de confusión
-confusionMatrix(factor(pred_class), factor(test_data$Fuga))
+
+# Convertir Fuga a factor con niveles 0 y 1 (en el mismo orden)
+test_data$Fuga <- factor(test_data$Fuga, levels = c(0, 1))
+pred_class     <- factor(pred_class,     levels = c(0, 1))
+
+# Ahora sí: matriz de confusión
+caret::confusionMatrix(pred_class, test_data$Fuga)
 ```
+
+#### Revisión de distribución de Variables" pred_class"
+
+```{r}
+table(pred_class)
+
+```
+
+#### Revisión final de Modelo
+
+```{r}
+summary(modelo_log)
+
+```
+
+# Conclusión
+
+Con base en la matriz de confusión y las estadísticas asociadas, se puede concluir lo siguiente:
+
+-   **Exactitud:** 94.7%. Esto indica que el modelo clasifica correctamente a la mayoría de los estudiantes.\
+    *Sin embargo, esta métrica está fuertemente influenciada por el desbalance de clases* (la mayoría de estudiantes no se fugan)
+
+-   **No Information Rate (NIR):** 94.6%. El modelo solo mejora ligeramente la predicción respecto a adivinar siempre la clase mayoritaria (`0`, no fuga).
+
+-   **P-Value \[Acc \> NIR\]:** 0.3558.\
+    Esto indica que **no hay evidencia estadísticamente significativa de que el modelo supere al clasificador trivial** (adivinar siempre la mayoría).
+
+#### Clasificación por clase
+
+-   **Sensibilidad (Recall para clase 0 / no fuga):** 99.7%.\
+    El modelo detecta muy bien a quienes no se fugan.
+
+-   **Especificidad (Recall para clase 1 / fuga):** 7.96%.\
+    El modelo identifica muy mal a los estudiantes en riesgo de fuga\*.
+
+-   **Balanced Accuracy:** 53.8%.\
+    El promedio entre sensibilidad y especificidad refleja el bajo desempeño real sobre ambas clases cuando hay desbalance.
+
+-   **Kappa: 0.1287**, valor muy bajo.\
+    Indica bajo acuerdo real entre predicciones y valores reales al controlar por el azar.
+
+-   **Mcnemar’s Test p-value \< 2e-16**\
+    Hay una diferencia significativa entre falsos positivos y falsos negativos, lo que sugiere que el modelo no trata ambas clases por igual.
+
+**Hipótesis nula**: El promedio de notas acumulado, los días de mora, el nivel de riesgo académico y el tipo de baja no tienen un efecto significativo sobre la probabilidad de fuga estudiantil.
+
+**Hipótesis alternativa**: Al menos una de esas variables tiene un efecto significativo sobre la probabilidad de fuga estudiantil.
+
+Aunque el modelo logra una alta exactitud general, esto se debe principalmente al desbalance de clases. No hay evidencia estadística de que supere un clasificador trivial y la muy baja capacidad para identificar a los estudiantes en riesgo de fuga ***especificidad ≈ 8%*** indica que el modelo no ha capturado bien la relación entre las variables predictoras y la fuga estudiantil.
+
+En consecuencia, no hay suficiente evidencia para rechazar la hipótesis nula. Con los datos actuales y el modelo usado, no se puede afirmar que las variables incluidas tengan un efecto significativo sobre la fuga estudiantil.
+
+para el proximo proyecto se Reentrenara el modelo con técnicas de balanceo y se explorara otros modelos se intentara aplicar métricas como AUC-ROC para medir mejor la capacidad de discriminación entre clases.
